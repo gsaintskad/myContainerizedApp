@@ -1,0 +1,62 @@
+# Specify the Docker Compose file version
+version: '3.8'
+
+# Define the services (containers) that make up your application
+services:
+  # Define the service for your Express API
+  api:
+    # Build the image using the Dockerfile in the ./api directory
+    build:
+      context: ./api # Assumes Dockerfile is inside the 'api' directory
+      dockerfile: Dockerfile # Optional if named Dockerfile
+    # Assign the container to the 'app-network'
+    networks:
+      - app-network
+    # Map host port 3000 to container port 3000 (where Express listens)
+    ports:
+      - "3000:3000"
+    # Define environment variables for the API container
+    environment:
+      - NODE_ENV=development
+      # The API doesn't need the frontend address, but could use PORT if needed
+      # - PORT=3000
+    # Mount local 'api' code into the container for development (excluding node_modules)
+    volumes:
+      - ./api:/usr/src/app
+      - /usr/src/app/node_modules # Use node_modules installed in the container
+
+  # Define the service for your Vite Frontend App
+  frontend:
+    # Build the image using the Dockerfile in the ./frontend directory
+    build:
+      context: ./frontend # Assumes Dockerfile is inside the 'frontend' directory
+      dockerfile: Dockerfile # Optional if named Dockerfile
+    # Assign the container to the 'app-network'
+    networks:
+      - app-network
+    # Map host port 5173 to container port 5173 (Vite's default dev port)
+    ports:
+      - "5173:5173"
+    # Define environment variables for the Frontend container
+    environment:
+      # Pass the API service name and port as an environment variable
+      # Vite needs specific prefix VITE_ for env vars to be exposed to the client-side code
+      - API_URL=http://mycontainerizedapp-api-1:3000
+      - CHOKIDAR_USEPOLLING=true
+    # Mount local 'frontend' code into the container for development (excluding node_modules)
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules # Use node_modules installed in the container
+    # Ensure the frontend service depends on the API service starting first (optional but good practice)
+    depends_on:
+      - api
+
+# Define the custom bridge network
+networks:
+  app-network:
+    driver: bridge
+
+# Define volumes (optional, for persistent data if needed later)
+# volumes:
+#   db-data:
+
